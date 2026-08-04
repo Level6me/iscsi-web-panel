@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#000" media="(prefers-color-scheme:dark)">
+<title>iSCSI Panel</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--bg:#f2f2f7;--card:#fff;--text:#000;--sec:#8e8e93;--accent:#007aff;--danger:#ff3b30;--ok:#34c759;--warn:#ff9500;--purple:#af52de;--dock:rgba(255,255,255,.85);--brd:rgba(128,128,128,.15)}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--text:#fff;--sec:#98989d;--dock:rgba(28,28,30,.85)}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro',sans-serif;padding-bottom:calc(100px + env(safe-area-inset-bottom))}
+.ctn{padding:20px 16px;max-width:600px;margin:0 auto;padding-top:max(20px,env(safe-area-inset-top))}
+.hdr{margin:10px 0 20px;display:flex;justify-content:space-between;align-items:flex-end}
+.ttl{font-size:34px;font-weight:700}
+.hdr-sub{font-size:12px;color:var(--sec)}
+.hdr-r{text-align:right}
+.sdot{font-size:12px;color:var(--ok)}
+.utime{font-size:11px;opacity:.5}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.card{background:var(--card);border-radius:18px;padding:18px;box-shadow:0 4px 12px rgba(0,0,0,.03);margin-bottom:14px}
+.cf{grid-column:1/-1}
+.vb{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.vs{font-size:14px;color:var(--sec);font-weight:500}
+.vsm{font-size:12px;color:var(--sec)}
+.cmini{height:90px;width:100%;margin-top:12px}
+.sub{font-size:13px;color:var(--sec);font-weight:600;margin:24px 0 10px 4px;text-transform:uppercase;letter-spacing:.5px}
+.li{padding:14px 0;border-bottom:.5px solid var(--brd);display:flex;justify-content:space-between;align-items:center}
+.li:last-child{border-bottom:none}
+.li.ck{cursor:pointer}
+.li.ck:active{background:rgba(128,128,128,.1);border-radius:8px}
+.ll{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
+.licon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ln{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lm{font-size:12px;color:var(--sec);margin-top:2px}
+.lr{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.badge{font-size:11px;padding:3px 8px;border-radius:8px;font-weight:600}
+.b-ok{background:rgba(52,199,89,.15);color:var(--ok)}
+.b-err{background:rgba(255,59,48,.15);color:var(--danger)}
+.b-warn{background:rgba(255,149,0,.15);color:var(--warn)}
+.b-info{background:rgba(0,122,255,.1);color:var(--accent)}
+.chev{color:var(--sec);font-size:14px}
+.btn{padding:14px;border-radius:14px;border:none;font-weight:600;font-size:16px;cursor:pointer;width:100%;transition:.2s}
+.btn:active{transform:scale(.98)}
+.btn-p{background:var(--accent);color:#fff}
+.btn-d{background:var(--danger);color:#fff}
+.btn-s{background:rgba(128,128,128,.12);color:var(--text)}
+.btn-sm{padding:8px 16px;font-size:13px;width:auto;border-radius:10px}
+.fab{position:fixed;bottom:calc(100px + env(safe-area-inset-bottom));right:max(20px,calc((100vw - 600px)/2));width:56px;height:56px;border-radius:28px;background:var(--accent);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 6px 20px rgba(0,122,255,.4);z-index:100;display:none;align-items:center;justify-content:center}
+.fab:active{transform:scale(.92)}
+.fab.show{display:flex}
+.dock{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:92%;max-width:420px;height:60px;background:var(--dock);backdrop-filter:blur(25px);-webkit-backdrop-filter:blur(25px);border-radius:30px;display:flex;justify-content:space-evenly;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.12);z-index:1000}
+.dbtn{border:none;background:none;width:40px;height:40px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;color:var(--sec);transition:.2s}
+.dbtn.act{color:var(--accent);background:rgba(0,122,255,.1)}
+.dbtn svg{width:20px;height:20px;fill:currentColor}
+.dlbl{font-size:8px;font-weight:600}
+.pg{display:none;opacity:0;transition:opacity .25s ease}
+.pg.act{display:block;opacity:1}
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:2000;opacity:0;transition:opacity .2s}
+.mov.act{display:flex;opacity:1}
+.mcard{background:var(--card);width:88%;max-width:450px;border-radius:20px;padding:24px;max-height:80vh;overflow-y:auto;transform:scale(.9);transition:transform .2s}
+.mov.act .mcard{transform:scale(1)}
+.mtitle{font-size:20px;font-weight:700;margin-bottom:16px}
+.minput{background:rgba(128,128,128,.08);border:none;padding:12px 16px;border-radius:12px;width:100%;color:var(--text);font-size:15px;margin-bottom:12px;outline:none}
+.minput:focus{box-shadow:0 0 0 2px var(--accent)}
+.mlabel{font-size:12px;color:var(--sec);font-weight:600;margin-bottom:6px;display:block}
+.msel{background:rgba(128,128,128,.08);border:none;padding:12px 16px;border-radius:12px;width:100%;color:var(--text);font-size:15px;margin-bottom:12px;outline:none;appearance:none}
+.macts{display:flex;gap:10px;margin-top:16px}
+.macts .btn{flex:1}
+.pbar{height:8px;background:rgba(128,128,128,.15);border-radius:4px;overflow:hidden;margin-top:6px}
+.pfill{height:100%;border-radius:4px;transition:width .5s}
+.empty{text-align:center;padding:40px 20px;color:var(--sec)}
+.eicon{font-size:48px;margin-bottom:12px}
+.abanner{background:rgba(255,59,48,.12);border:1px solid var(--danger);color:var(--danger);border-radius:14px;padding:14px 18px;margin-bottom:14px;display:none;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.abanner.show{display:flex}
+.sbar{background:rgba(128,128,128,.12);border:none;padding:10px 16px;border-radius:12px;width:100%;color:var(--text);font-size:15px;outline:none;margin-bottom:14px}
+.sbar::placeholder{color:var(--sec)}
+.seg{display:flex;background:rgba(128,128,128,.1);padding:2px;border-radius:10px;margin-bottom:14px}
+.segi{flex:1;border:none;background:none;color:var(--sec);padding:8px 4px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:.2s}
+.segi.act{background:var(--card);color:var(--text);box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.toast{position:fixed;top:calc(20px + env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-100px);background:var(--card);color:var(--text);padding:12px 24px;border-radius:14px;font-weight:600;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.15);z-index:3000;transition:transform .3s;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.logbox{background:var(--bg);padding:14px;border-radius:12px;font-family:'SF Mono',monospace;font-size:11px;white-space:pre-wrap;max-height:300px;overflow-y:auto;line-height:1.6}
+.srow{display:flex;justify-content:space-between;padding:8px 0}
+.slbl{color:var(--sec);font-size:13px}
+.sval{font-weight:600;font-size:13px}
+.loader{text-align:center;padding:40px;color:var(--sec)}
+.spinner{width:30px;height:30px;border:3px solid var(--brd);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tab-content{display:none}
+.tab-content.act{display:block}
+.api-item{background:var(--bg);border-radius:10px;padding:12px;margin-bottom:8px;font-size:12px}
+.api-method{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:700;font-size:10px;margin-right:8px}
+.api-get{background:rgba(0,122,255,.15);color:var(--accent)}
+.api-post{background:rgba(52,199,89,.15);color:var(--ok)}
+.api-put{background:rgba(255,149,0,.15);color:var(--warn)}
+.api-delete{background:rgba(255,59,48,.15);color:var(--danger)}
+.api-path{font-family:'SF Mono',monospace;font-weight:600}
+.api-desc{color:var(--sec);margin-top:4px;font-size:11px}
+.chart-lg{height:200px;width:100%;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="mov" id="loginModal"><div class="mcard"><div class="mtitle">登录 iSCSI Panel</div><label class="mlabel">用户名</label><input class="minput" id="loginUser" placeholder="admin" value="admin"><label class="mlabel">密码</label><input class="minput" id="loginPass" type="password" placeholder="password" value="admin"><div class="macts"><button class="btn btn-p" onclick="doLogin()">登录</button></div></div></div>
+<div class="mov" id="deleteModal"><div class="mcard"><div class="mtitle">确认删除</div><p style="color:var(--sec);font-size:14px;margin-bottom:16px" id="deleteMsg">确定要删除吗？此操作不可撤销。</p><div class="macts"><button class="btn btn-s" onclick="closeModal('deleteModal')">取消</button><button class="btn btn-d" id="deleteConfirmBtn">删除</button></div></div></div>
+<div class="mov" id="formModal"><div class="mcard"><div class="mtitle" id="formTitle">创建</div><div id="formBody"></div><div class="macts"><button class="btn btn-s" onclick="closeModal('formModal')">取消</button><button class="btn btn-p" id="formSubmitBtn">保存</button></div></div></div>
+<div class="ctn">
+<div class="hdr"><div><div class="hdr-sub" id="dateNow"></div><div class="ttl" id="pgTitle">仪表盘</div></div><div class="hdr-r"><div class="sdot">● 运行中</div><div class="utime" id="uptime">--</div></div></div>
+<div class="abanner" id="alertBanner"><span>⚠️</span><span id="alertMsg" style="flex:1"></span></div>
+<div id="p-dash" class="pg act">
+<div class="grid">
+<div class="card"><div class="vs" style="color:var(--accent)">Target 数量</div><div class="vb" id="dTargets">-</div><div class="vsm">活跃 <span id="dTargetsAct">-</span></div></div>
+<div class="card"><div class="vs" style="color:var(--purple)">LUN 数量</div><div class="vb" id="dLuns">-</div><div class="vsm">总容量 <span id="dLunsSize">-</span></div></div>
+<div class="card"><div class="vs" style="color:var(--ok)">连接数</div><div class="vb" id="dConn">-</div><div class="vsm">存储 <span id="dStorage">-</span></div></div>
+<div class="card"><div class="vs" style="color:var(--warn)">告警</div><div class="vb" id="dAlerts">-</div><div class="vsm">运行 <span id="dUptime">-</span></div></div>
+</div>
+<div class="card"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span class="vs">系统资源</span><span style="font-size:12px;font-weight:600" id="dCpuTxt">-</span></div><div class="cmini"><canvas id="cpuChart"></canvas></div></div>
+<div class="card"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span class="vs">吞吐量</span><span style="font-size:12px;font-weight:600"><span style="color:var(--ok)">↓ <span id="dThR">0</span> MB/s</span> <span style="color:var(--accent)">↑ <span id="dThW">0</span> MB/s</span></span></div><div class="cmini"><canvas id="thrChart"></canvas></div></div>
+<div class="card"><div class="vs" style="margin-bottom:8px">最近活动</div><div id="dActivities"><div class="loader"><div class="spinner"></div>加载中...</div></div></div>
+</div>
+<div id="p-targets" class="pg">
+<div class="seg"><button class="segi act" onclick="switchSub('targets','list',this)">Target 列表</button><button class="segi" onclick="switchSub('targets','portals',this)">Portal</button><button class="segi" onclick="switchSub('targets','chap',this)">CHAP</button></div>
+<div id="targets-list" class="tab-content act"><div id="targetsList"></div></div>
+<div id="targets-portals" class="tab-content"><div id="portalsList"></div></div>
+<div id="targets-chap" class="tab-content"><div id="chapConfig"></div></div>
+</div>
+<div id="p-luns" class="pg"><div id="lunsList"></div></div>
+<div id="p-initiators" class="pg"><div id="initiatorsList"></div></div>
+<div id="p-network" class="pg">
+<div class="seg"><button class="segi act" onclick="switchSub('network','interfaces',this)">网络接口</button><button class="segi" onclick="switchSub('network','portals',this)">Portal 管理</button></div>
+<div id="network-interfaces" class="tab-content act"><div id="interfacesList"></div></div>
+<div id="network-portals" class="tab-content"><div id="portalsMgmt"></div></div>
+</div>
+<div id="p-storage" class="pg"><div id="storageList"></div></div>
+<div id="p-monitor" class="pg">
+<div class="seg"><button class="segi act" onclick="switchSub('monitor','perf',this)">性能</button><button class="segi" onclick="switchSub('monitor','conn',this)">连接</button></div>
+<div id="monitor-perf" class="tab-content act">
+<div class="card"><div class="vs">IOPS</div><div class="vb" id="mIops">-</div><div class="chart-lg"><canvas id="iopsChart"></canvas></div></div>
+<div class="card"><div class="vs">延迟 (ms)</div><div class="vb" id="mLatency">-</div><div class="chart-lg"><canvas id="latChart"></canvas></div></div>
+<div class="card"><div class="vs">吞吐量 (MB/s)</div><div class="vb" id="mThroughput">-</div><div class="chart-lg"><canvas id="thruChart"></canvas></div></div>
+</div>
+<div id="monitor-conn" class="tab-content"><div id="connList"></div></div>
+</div>
+<div id="p-alerts" class="pg">
+<div class="seg"><button class="segi act" onclick="switchSub('alerts','history',this)">告警历史</button><button class="segi" onclick="switchSub('alerts','rules',this)">规则</button></div>
+<div id="alerts-history" class="tab-content act"><div id="alertsList"></div></div>
+<div id="alerts-rules" class="tab-content"><div id="rulesList"></div></div>
+</div>
+<div id="p-logs" class="pg">
+<input class="sbar" id="logSearch" placeholder="搜索日志..." oninput="filterLogs()">
+<div class="seg"><button class="segi act" onclick="setLogLevel('all',this)">全部</button><button class="segi" onclick="setLogLevel('info',this)">Info</button><button class="segi" onclick="setLogLevel('warn',this)">Warn</button><button class="segi" onclick="setLogLevel('error',this)">Error</button></div>
+<div id="logsList"></div>
+<button class="btn btn-s" style="margin-top:14px" onclick="exportLogs()">📥 导出日志</button>
+</div>
+<div id="p-users" class="pg"><div id="usersList"></div></div>
+<div id="p-settings" class="pg">
+<div class="seg"><button class="segi act" onclick="switchSub('settings','basic',this)">基础</button><button class="segi" onclick="switchSub('settings','backup',this)">备份</button><button class="segi" onclick="switchSub('settings','about',this)">关于</button></div>
+<div id="settings-basic" class="tab-content act"><div id="settingsForm"></div></div>
+<div id="settings-backup" class="tab-content">
+<div class="card"><div class="vs" style="margin-bottom:12px">备份配置</div><p style="color:var(--sec);font-size:13px;margin-bottom:14px">导出当前系统配置为 JSON 文件</p><button class="btn btn-p" onclick="backupConfig()">📦 导出备份</button></div>
+<div class="card"><div class="vs" style="margin-bottom:12px">恢复配置</div><p style="color:var(--sec);font-size:13px;margin-bottom:14px">从备份文件恢复系统配置</p><input type="file" id="restoreFile" accept=".json" style="margin-bottom:12px"><button class="btn btn-s" onclick="restoreConfig()">📂 导入恢复</button></div>
+</div>
+<div id="settings-about" class="tab-content"><div id="aboutInfo"></div></div>
+</div>
+<div id="p-snapshots" class="pg"><div id="snapshotsList"></div></div>
+<div id="p-apidoc" class="pg">
+<input class="sbar" id="apiSearch" placeholder="搜索接口..." oninput="filterApi()">
+<div id="apiDocList"></div>
+</div>
+</div>
+<button class="fab" id="fab" onclick="handleFab()">+</button>
+<div class="dock">
+<button class="dbtn act" onclick="switchTab('dash',this)" data-tab="dash"><svg viewBox="0 0 24 24"><path d="M4 13h6a1 1 0 001-1V4a1 1 0 00-1-1H4a1 1 0 00-1 1v8a1 1 0 001 1zm0 8h6a1 1 0 001-1v-4a1 1 0 00-1-1H4a1 1 0 00-1 1v4a1 1 0 001 1zm10 0h6a1 1 0 001-1v-8a1 1 0 00-1-1h-6a1 1 0 00-1 1v8a1 1 0 001 1zm0-18v4a1 1 0 001 1h6a1 1 0 001-1V4a1 1 0 00-1-1h-6a1 1 0 00-1 1z"/></svg><span class="dlbl">仪表盘</span></button>
+<button class="dbtn" onclick="switchTab('targets',this)" data-tab="targets"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z"/></svg><span class="dlbl">存储</span></button>
+<button class="dbtn" onclick="switchTab('initiators',this)" data-tab="initiators"><svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg><span class="dlbl">连接</span></button>
+<button class="dbtn" onclick="switchTab('monitor',this)" data-tab="monitor"><svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg><span class="dlbl">监控</span></button>
+<button class="dbtn" onclick="switchTab('settings',this)" data-tab="settings"><svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg><span class="dlbl">设置</span></button>
+</div>
+<script>
+const API_BASE = '/api/v1';
+let token = localStorage.getItem('iscsi_token');
+let currentTab = 'dash';
+let currentSubTab = {};
+let charts = {};
+let monitorInterval = null;
+let logsData = [];
+let logLevel = 'all';
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  updateDateTime();
+  setInterval(updateDateTime, 60000);
+  if (!token) showLogin();
+  else { loadDashboard(); startMonitorRefresh(); }
+});
+
+function updateDateTime() {
+  const now = new Date();
+  document.getElementById('dateNow').textContent = now.toLocaleDateString('zh-CN', {month:'long', day:'numeric', weekday:'long'});
+}
+
+function showLogin() { document.getElementById('loginModal').classList.add('act'); }
+function hideLogin() { document.getElementById('loginModal').classList.remove('act'); }
+
+async function doLogin() {
+  const user = document.getElementById('loginUser').value;
+  const pass = document.getElementById('loginPass').value;
+  try {
+    const r = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({username:user, password:pass})
+    });
+    const d = await r.json();
+    if (d.code === 0) {
+      token = d.data.token;
+      localStorage.setItem('iscsi_token', token);
+      hideLogin();
+      loadDashboard();
+      startMonitorRefresh();
+      toast('登录成功', 'ok');
+    } else toast(d.message || '登录失败', 'err');
+  } catch(e) { toast('网络错误', 'err'); }
+}
+
+function logout() {
+  localStorage.removeItem('iscsi_token');
+  token = null;
+  showLogin();
+}
+
+async function api(path, opts={}) {
+  const headers = {'Content-Type':'application/json', ...opts.headers};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  try {
+    const r = await fetch(`${API_BASE}${path}`, {...opts, headers});
+    const d = await r.json();
+    if (d.code !== 0) throw new Error(d.message);
+    return d.data;
+  } catch(e) {
+    if (e.message.includes('401')) logout();
+    throw e;
+  }
+}
+
+function toast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type==='ok' ? 'var(--ok)' : type==='err' ? 'var(--danger)' : 'var(--card)';
+  t.style.color = type==='ok'||type==='err' ? '#fff' : 'var(--text)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('act'); }
+function closeModal(id) { document.getElementById(id).classList.remove('act'); }
+
+function switchTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.pg').forEach(p => p.classList.remove('act'));
+  document.querySelectorAll('.dbtn').forEach(b => b.classList.remove('act'));
+  
+  const pageMap = {
+    dash: 'p-dash',
+    targets: 'p-targets',
+    luns: 'p-luns',
+    initiators: 'p-initiators',
+    network: 'p-network',
+    storage: 'p-storage',
+    monitor: 'p-monitor',
+    alerts: 'p-alerts',
+    logs: 'p-logs',
+    users: 'p-users',
+    settings: 'p-settings',
+    snapshots: 'p-snapshots',
+    apidoc: 'p-apidoc'
+  };
+  
+  const titleMap = {
+    dash: '仪表盘', targets: 'Target 管理', luns: 'LUN 管理', initiators: 'Initiator 管理',
+    network: '网络配置', storage: '存储池', monitor: '监控', alerts: '告警',
+    logs: '日志', users: '用户权限', settings: '系统设置', snapshots: '快照', apidoc: 'API 文档'
+  };
+  
+  document.getElementById(pageMap[tab]).classList.add('act');
+  if (btn) btn.classList.add('act');
+  document.getElementById('pgTitle').textContent = titleMap[tab] || tab;
+  
+  const fab = document.getElementById('fab');
+  fab.classList.toggle('show', ['targets','luns','initiators','storage','users','snapshots','alerts'].includes(tab));
+  
+  loadTabData(tab);
+}
+
+function switchSub(parent, sub, btn) {
+  currentSubTab[parent] = sub;
+  document.querySelectorAll(`#${parent} .tab-content`).forEach(t => t.classList.remove('act'));
+  document.querySelectorAll(`#${parent} .segi`).forEach(b => b.classList.remove('act'));
+  document.getElementById(`${parent}-${sub}`).classList.add('act');
+  if (btn) btn.classList.add('act');
+}
+
+function handleFab() {
+  const actions = {
+    targets: () => showTargetForm(),
+    luns: () => showLUNForm(),
+    initiators: () => showInitiatorForm(),
+    storage: () => showStorageForm(),
+    users: () => showUserForm(),
+    snapshots: () => showSnapshotForm(),
+    alerts: () => showAlertRuleForm()
+  };
+  if (actions[currentTab]) actions[currentTab]();
+}
+
+async function loadTabData(tab) {
+  try {
+    if (tab === 'dash') await loadDashboard();
+    else if (tab === 'targets') await loadTargets();
+    else if (tab === 'luns') await loadLUNs();
+    else if (tab === 'initiators') await loadInitiators();
+    else if (tab === 'network') await loadNetwork();
+    else if (tab === 'storage') await loadStorage();
+    else if (tab === 'monitor') await loadMonitor();
+    else if (tab === 'alerts') await loadAlerts();
+    else if (tab === 'logs') await loadLogs();
+    else if (tab === 'users') await loadUsers();
+    else if (tab === 'settings') await loadSettings();
+    else if (tab === 'snapshots') await loadSnapshots();
+    else if (tab === 'apidoc') await loadAPIDoc();
+  } catch(e) { toast(e.message, 'err'); }
+}
+async function loadDashboard() {
+  try {
+    const [overview, stats] = await Promise.all([
+      api('/dashboard/overview'),
+      api('/dashboard/stats')
+    ]);
+    
+    document.getElementById('dTargets').textContent = overview.total_targets;
+    document.getElementById('dTargetsAct').textContent = overview.active_targets;
+    document.getElementById('dLuns').textContent = overview.total_luns;
+    document.getElementById('dLunsSize').textContent = `${overview.total_storage_gb.toFixed(1)} GB`;
+    document.getElementById('dConn').textContent = overview.total_connections;
+    document.getElementById('dStorage').textContent = `${overview.used_storage_gb.toFixed(1)}/${overview.total_storage_gb.toFixed(1)} GB`;
+    document.getElementById('dAlerts').textContent = overview.alert_count;
+    document.getElementById('dUptime').textContent = overview.uptime;
+    document.getElementById('uptime').textContent = overview.uptime;
+    
+    document.getElementById('dCpuTxt').textContent = `CPU ${stats.cpu_usage.toFixed(1)}% | 内存 ${stats.mem_usage.toFixed(1)}%`;
+    
+    if (overview.alert_count > 0) {
+      document.getElementById('alertBanner').classList.add('show');
+      document.getElementById('alertMsg').textContent = `${overview.alert_count} 个告警需要处理`;
+    }
+    
+    initDashboardCharts(stats);
+    
+    document.getElementById('dActivities').innerHTML = `
+      <div class="li"><div class="ll"><div class="licon" style="background:rgba(0,122,255,.15)">📦</div><div><div class="ln">Target target1 已创建</div><div class="lm">2 小时前</div></div></div></div>
+      <div class="li"><div class="ll"><div class="licon" style="background:rgba(52,199,89,.15)">✅</div><div><div class="ln">Initiator initiator1 已连接</div><div class="lm">5 小时前</div></div></div></div>
+      <div class="li"><div class="ll"><div class="licon" style="background:rgba(255,149,0,.15)">⚠️</div><div><div class="ln">存储池 pool1 使用率超过 80%</div><div class="lm">1 天前</div></div></div></div>
+    `;
+  } catch(e) { console.error('Dashboard error:', e); }
+}
+
+function initDashboardCharts(stats) {
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const textColor = isDark ? '#98989d' : '#8e8e93';
+  const gridColor = isDark ? 'rgba(128,128,128,0.1)' : 'rgba(128,128,128,0.08)';
+  
+  if (charts.cpu) charts.cpu.destroy();
+  const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+  charts.cpu = new Chart(cpuCtx, {
+    type: 'line',
+    data: {
+      labels: Array(10).fill(''),
+      datasets: [{
+        label: 'CPU',
+        data: Array(10).fill(0).map((_, i) => i === 9 ? stats.cpu_usage : Math.random() * 30 + 10),
+        borderColor: '#007aff',
+        backgroundColor: 'rgba(0,122,255,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0
+      }, {
+        label: '内存',
+        data: Array(10).fill(0).map((_, i) => i === 9 ? stats.mem_usage : Math.random() * 20 + 30),
+        borderColor: '#af52de',
+        backgroundColor: 'rgba(175,82,222,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: { display: false, beginAtZero: true, max: 100 }
+      }
+    }
+  });
+  
+  if (charts.thr) charts.thr.destroy();
+  const thrCtx = document.getElementById('thrChart').getContext('2d');
+  charts.thr = new Chart(thrCtx, {
+    type: 'line',
+    data: {
+      labels: Array(10).fill(''),
+      datasets: [{
+        label: '读',
+        data: Array(10).fill(0).map(() => Math.random() * 50 + 20),
+        borderColor: '#34c759',
+        backgroundColor: 'rgba(52,199,89,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0
+      }, {
+        label: '写',
+        data: Array(10).fill(0).map(() => Math.random() * 30 + 10),
+        borderColor: '#007aff',
+        backgroundColor: 'rgba(0,122,255,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: { display: false, beginAtZero: true }
+      }
+    }
+  });
+  
+  document.getElementById('dThR').textContent = charts.thr.data.datasets[0].data[9].toFixed(1);
+  document.getElementById('dThW').textContent = charts.thr.data.datasets[1].data[9].toFixed(1);
+}
+
+async function loadTargets() {
+  const targets = await api('/targets');
+  const html = targets.length === 0 ? '<div class="empty"><div class="eicon">📦</div><div>暂无 Target</div></div>' :
+    targets.map(t => `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+          <div>
+            <div class="ln">${t.name}</div>
+            <div class="lm" style="font-family:monospace;font-size:11px;margin-top:4px">${t.iqn}</div>
+          </div>
+          <span class="badge ${t.status==='active'?'b-ok':'b-err'}">${t.status}</span>
+        </div>
+        <div style="display:flex;gap:12px;font-size:12px;color:var(--sec);margin-top:12px">
+          <span>LUN: ${t.luns?.length || 0}</span>
+          <span>ACL: ${t.acls?.length || 0}</span>
+          <span>Portal: ${t.portals?.length || 0}</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-sm btn-s" onclick="editTarget('${t.name}')">编辑</button>
+          <button class="btn btn-sm btn-d" onclick="deleteTarget('${t.name}')">删除</button>
+        </div>
+      </div>
+    `).join('');
+  document.getElementById('targetsList').innerHTML = html;
+  
+  const portals = await api('/network/portals');
+  document.getElementById('portalsList').innerHTML = portals.length === 0 ? '<div class="empty"><div class="eicon">🌐</div><div>暂无 Portal</div></div>' :
+    portals.map(p => `
+      <div class="card">
+        <div class="ln">${p.ip}:${p.port}</div>
+        <div class="lm">状态: ${p.status || 'active'}</div>
+      </div>
+    `).join('');
+  
+  const discovery = await api('/network/discovery');
+  document.getElementById('chapConfig').innerHTML = `
+    <div class="card">
+      <div class="vs" style="margin-bottom:12px">Discovery 认证</div>
+      <div class="srow"><span class="slbl">用户名</span><span class="sval">${discovery.username || '-'}</span></div>
+      <div class="srow"><span class="slbl">密码</span><span class="sval">${discovery.password ? '****' : '-'}</span></div>
+      <button class="btn btn-s" style="margin-top:12px" onclick="showCHAPForm()">配置 CHAP</button>
+    </div>
+  `;
+}
+
+function showTargetForm(edit=null) {
+  document.getElementById('formTitle').textContent = edit ? '编辑 Target' : '创建 Target';
+  document.getElementById('formBody').innerHTML = `
+    <label class="mlabel">IQN</label>
+    <input class="minput" id="fIqn" placeholder="iqn.2024-01.com.example:target1" value="${edit?.iqn || ''}">
+  `;
+  document.getElementById('formSubmitBtn').onclick = async () => {
+    const iqn = document.getElementById('fIqn').value;
+    if (!iqn) return toast('请输入 IQN', 'err');
+    try {
+      if (edit) await api(`/targets/${edit.name}`, {method:'PUT', body:JSON.stringify({iqn})});
+      else await api('/targets', {method:'POST', body:JSON.stringify({iqn})});
+      closeModal('formModal');
+      toast(edit ? '更新成功' : '创建成功', 'ok');
+      loadTargets();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('formModal');
+}
+
+function editTarget(name) {
+  api(`/targets/${name}`).then(t => showTargetForm(t));
+}
+
+function deleteTarget(name) {
+  document.getElementById('deleteMsg').textContent = `确定要删除 Target "${name}" 吗？`;
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/targets/${name}`, {method:'DELETE'});
+      closeModal('deleteModal');
+      toast('删除成功', 'ok');
+      loadTargets();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+async function loadLUNs() {
+  const luns = await api('/luns');
+  const html = luns.length === 0 ? '<div class="empty"><div class="eicon">💾</div><div>暂无 LUN</div></div>' :
+    luns.map(l => `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+          <div>
+            <div class="ln">LUN ${l.index}</div>
+            <div class="lm" style="font-family:monospace;font-size:11px;margin-top:4px">${l.storage_obj}</div>
+          </div>
+          <span class="badge ${l.read_only?'b-warn':'b-ok'}">${l.read_only?'只读':'读写'}</span>
+        </div>
+        <div class="srow"><span class="slbl">路径</span><span class="sval">${l.backing_path}</span></div>
+        <div class="srow"><span class="slbl">大小</span><span class="sval">${(l.size_bytes/1024/1024/1024).toFixed(2)} GB</span></div>
+        <div class="srow"><span class="slbl">类型</span><span class="sval">${l.type}</span></div>
+        <div class="srow"><span class="slbl">Target</span><span class="sval" style="font-size:11px">${l.target_name}</span></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-sm btn-s" onclick="editLUN(${l.id})">编辑</button>
+          <button class="btn btn-sm btn-d" onclick="deleteLUN(${l.id})">删除</button>
+        </div>
+      </div>
+    `).join('');
+  document.getElementById('lunsList').innerHTML = html;
+}
+
+function showLUNForm(edit=null) {
+  document.getElementById('formTitle').textContent = edit ? '编辑 LUN' : '创建 LUN';
+  document.getElementById('formBody').innerHTML = `
+    <label class="mlabel">Target</label>
+    <input class="minput" id="fTarget" placeholder="iqn.2024-01.com.example:target1" value="${edit?.target_name || ''}">
+    <label class="mlabel">后端路径</label>
+    <input class="minput" id="fPath" placeholder="/dev/sdb 或 /data/lun.img" value="${edit?.backing_path || ''}">
+    <label class="mlabel">类型</label>
+    <select class="msel" id="fType">
+      <option value="blockio" ${edit?.type==='blockio'?'selected':''}>blockio</option>
+      <option value="fileio" ${edit?.type==='fileio'?'selected':''}>fileio</option>
+    </select>
+    <label class="mlabel">大小 (GB)</label>
+    <input class="minput" id="fSize" type="number" placeholder="100" value="${edit ? edit.size_bytes/1024/1024/1024 : ''}">
+  `;
+  document.getElementById('formSubmitBtn').onclick = async () => {
+    const data = {
+      target_name: document.getElementById('fTarget').value,
+      backing_path: document.getElementById('fPath').value,
+      type: document.getElementById('fType').value,
+      size_bytes: parseFloat(document.getElementById('fSize').value) * 1024 * 1024 * 1024
+    };
+    if (!data.target_name || !data.backing_path) return toast('请填写必填项', 'err');
+    try {
+      if (edit) await api(`/luns/${edit.id}`, {method:'PUT', body:JSON.stringify(data)});
+      else await api('/luns', {method:'POST', body:JSON.stringify(data)});
+      closeModal('formModal');
+      toast(edit ? '更新成功' : '创建成功', 'ok');
+      loadLUNs();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('formModal');
+}
+
+function editLUN(id) {
+  api(`/luns/${id}`).then(l => showLUNForm(l));
+}
+
+function deleteLUN(id) {
+  document.getElementById('deleteMsg').textContent = `确定要删除 LUN ${id} 吗？`;
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/luns/${id}`, {method:'DELETE'});
+      closeModal('deleteModal');
+      toast('删除成功', 'ok');
+      loadLUNs();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+
+async function loadInitiators() {
+  const initiators = await api('/initiators');
+  const html = initiators.length === 0 ? '<div class="empty"><div class="eicon">🔌</div><div>暂无 Initiator</div></div>' :
+    initiators.map(i => `
+      <div class="card">
+        <div class="ln" style="font-family:monospace;font-size:12px">${i.initiator_iqn}</div>
+        <div style="margin-top:12px">
+          <div class="lm">CHAP: ${i.chap ? '✅ 已配置' : '❌ 未配置'}</div>
+          <div class="lm">LUN 映射: ${i.lun_mapping?.length || 0} 个</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-sm btn-s" onclick="editInitiator('${i.initiator_iqn}')">编辑</button>
+          <button class="btn btn-sm btn-d" onclick="deleteInitiator('${i.initiator_iqn}')">删除</button>
+        </div>
+      </div>
+    `).join('');
+  document.getElementById('initiatorsList').innerHTML = html;
+}
+
+function showInitiatorForm(edit=null) {
+  document.getElementById('formTitle').textContent = edit ? '编辑 Initiator' : '创建 Initiator';
+  document.getElementById('formBody').innerHTML = `
+    <label class="mlabel">Initiator IQN</label>
+    <input class="minput" id="fInitIqn" placeholder="iqn.2024-01.com.example:initiator1" value="${edit?.initiator_iqn || ''}">
+    <label class="mlabel">Target</label>
+    <input class="minput" id="fInitTarget" placeholder="iqn.2024-01.com.example:target1" value="${edit?.target_name || ''}">
+  `;
+  document.getElementById('formSubmitBtn').onclick = async () => {
+    const data = {
+      initiator_iqn: document.getElementById('fInitIqn').value,
+      target_name: document.getElementById('fInitTarget').value
+    };
+    if (!data.initiator_iqn || !data.target_name) return toast('请填写必填项', 'err');
+    try {
+      if (edit) await api(`/initiators/${edit.initiator_iqn}`, {method:'PUT', body:JSON.stringify(data)});
+      else await api('/initiators', {method:'POST', body:JSON.stringify(data)});
+      closeModal('formModal');
+      toast(edit ? '更新成功' : '创建成功', 'ok');
+      loadInitiators();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('formModal');
+}
+
+function editInitiator(iqn) {
+  api(`/initiators/${iqn}`).then(i => showInitiatorForm(i));
+}
+
+function deleteInitiator(iqn) {
+  document.getElementById('deleteMsg').textContent = `确定要删除 Initiator "${iqn}" 吗？`;
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/initiators/${iqn}`, {method:'DELETE'});
+      closeModal('deleteModal');
+      toast('删除成功', 'ok');
+      loadInitiators();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+async function loadNetwork() {
+  const interfaces = await api('/network/interfaces');
+  const html = interfaces.length === 0 ? '<div class="empty"><div class="eicon">🌐</div><div>暂无网络接口</div></div>' :
+    interfaces.map(i => `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div class="ln">${i.name}</div>
+          <span class="badge ${i.status==='up'?'b-ok':'b-err'}">${i.status}</span>
+        </div>
+        <div class="srow"><span class="slbl">IP 地址</span><span class="sval">${i.ip || '-'}</span></div>
+        <div class="srow"><span class="slbl">MAC</span><span class="sval" style="font-family:monospace;font-size:11px">${i.mac || '-'}</span></div>
+        <div class="srow"><span class="slbl">速率</span><span class="sval">${i.speed || '-'}</span></div>
+      </div>
+    `).join('');
+  document.getElementById('interfacesList').innerHTML = html;
+  
+  const portals = await api('/network/portals');
+  const portalsHtml = portals.length === 0 ? '<div class="empty"><div class="eicon">🎯</div><div>暂无 Portal</div></div>' :
+    portals.map(p => `
+      <div class="card">
+        <div class="ln">${p.ip}:${p.port}</div>
+        <div class="lm">状态: ${p.status || 'active'}</div>
+        <button class="btn btn-sm btn-d" style="margin-top:12px" onclick="deletePortal('${p.ip}:${p.port}')">删除</button>
+      </div>
+    `).join('');
+  document.getElementById('portalsMgmt').innerHTML = portalsHtml + 
+    '<button class="btn btn-p" style="margin-top:14px" onclick="showPortalForm()">添加 Portal</button>';
+}
+
+function showPortalForm() {
+  document.getElementById('formTitle').textContent = '添加 Portal';
+  document.getElementById('formBody').innerHTML = `
+    <label class="mlabel">IP 地址</label>
+    <input class="minput" id="fPortalIp" placeholder="0.0.0.0">
+    <label class="mlabel">端口</label>
+    <input class="minput" id="fPortalPort" type="number" placeholder="3260" value="3260">
+  `;
+  document.getElementById('formSubmitBtn').onclick = async () => {
+    const data = {
+      ip: document.getElementById('fPortalIp').value,
+      port: parseInt(document.getElementById('fPortalPort').value)
+    };
+    if (!data.ip) return toast('请输入 IP 地址', 'err');
+    try {
+      await api('/network/portals', {method:'POST', body:JSON.stringify(data)});
+      closeModal('formModal');
+      toast('添加成功', 'ok');
+      loadNetwork();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('formModal');
+}
+
+function deletePortal(addr) {
+  document.getElementById('deleteMsg').textContent = `确定要删除 Portal "${addr}" 吗？`;
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/network/portals/${addr}`, {method:'DELETE'});
+      closeModal('deleteModal');
+      toast('删除成功', 'ok');
+      loadNetwork();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+
+function showCHAPForm() {
+  document.getElementById('formTitle').textContent = '配置 CHAP';
+  document.getElementById('formBody').innerHTML = `
+    <label class="mlabel">用户名</label>
+    <input class="minput" id="fChapUser" placeholder="username">
+    <label class="mlabel">密码</label>
+    <input class="minput" id="fChapPass" type="password" placeholder="password">
+  `;
+  document.getElementById('formSubmitBtn').onclick = async () => {
+    const data = {
+      username: document.getElementById('fChapUser').value,
+      password: document.getElementById('fChapPass').value
+    };
+    if (!data.username || !data.password) return toast('请填写完整', 'err');
+    try {
+      await api('/network/discovery', {method:'PUT', body:JSON.stringify(data)});
+      closeModal('formModal');
+      toast('配置成功', 'ok');
+      loadTargets();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('formModal');
+}
+
+async function loadStorage() {
+  const pools = await api('/storage/pools');
+  const html = pools.length === 0 ? '<div class="empty"><div class="eicon">🗄️</div><div>暂无存储池</div></div>' :
+    pools.map(p => `
+      <div class="card">
+        <div class="ln">${p.name}</div>
+        <div class="srow"><span class="slbl">路径</span><span class="sval">${p.path}</span></div>
+        <div class="srow"><span class="slbl">容量</span><span class="sval">${(p.total_bytes/1024/1024/1024).toFixed(2)} GB</span></div>
+        <div class="srow"><span class="slbl">已用</span><span class="sval">${(p.used_bytes/1024/1024/1024).toFixed(2)} GB</span></div>
+        <div class="pbar"><div class="pfill" style="width:${(p.used_bytes/p.total_bytes*100).toFixed(1)}%;background:${p.used_bytes/p.total_bytes>0.8?'var(--danger)':'var(--ok)'}"></div></div>
+        <button class="btn btn-sm btn-d" style="margin-top:12px" onclick="deleteStoragePool('${p.name}')">删除</button>
+      </div>
+    `).join('');
+  document.getElementById('storageList').innerHTML = html;
+}
+
+function showStorageForm() {
+  document.getElementById('formTitle').textContent = '创建存储池';
+  document.getElementById('formBody').innerHTML = `
+    <label class="mlabel">名称</label>
+    <input class="minput" id="fPoolName" placeholder="pool1">
+    <label class="mlabel">路径</label>
+    <input class="minput" id="fPoolPath" placeholder="/data/iscsi">
+  `;
+  document.getElementById('formSubmitBtn').onclick = async () => {
+    const data = {
+      name: document.getElementById('fPoolName').value,
+      path: document.getElementById('fPoolPath').value
+    };
+    if (!data.name || !data.path) return toast('请填写完整', 'err');
+    try {
+      await api('/storage/pools', {method:'POST', body:JSON.stringify(data)});
+      closeModal('formModal');
+      toast('创建成功', 'ok');
+      loadStorage();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('formModal');
+}
+
+function deleteStoragePool(name) {
+  document.getElementById('deleteMsg').textContent = `确定要删除存储池 "${name}" 吗？`;
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/storage/pools/${name}`, {method:'DELETE'});
+      closeModal('deleteModal');
+      toast('删除成功', 'ok');
+      loadStorage();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+async function loadMonitor() {
+  const metrics = await api('/monitor/metrics');
+  const perf = await api('/monitor/performance');
+  
+  document.getElementById('mIops').textContent = perf.iops.toFixed(0);
+  document.getElementById('mLatency').textContent = perf.latency_ms.toFixed(2);
+  document.getElementById('mThroughput').textContent = (perf.throughput_mb_s).toFixed(2);
+  
+  initMonitorCharts(perf);
+  
+  const conns = await api('/monitor/connections');
+  const connHtml = conns.length === 0 ? '<div class="empty"><div class="eicon">🔗</div><div>暂无活跃连接</div></div>' :
+    conns.map(c => `
+      <div class="card">
+        <div class="ln">${c.initiator_iqn}</div>
+        <div class="srow"><span class="slbl">Target</span><span class="sval">${c.target_iqn}</span></div>
+        <div class="srow"><span class="slbl">状态</span><span class="sval"><span class="badge b-ok">${c.state}</span></span></div>
+        <div class="srow"><span class="slbl">连接时间</span><span class="sval">${new Date(c.connected_at).toLocaleString('zh-CN')}</span></div>
+      </div>
+    `).join('');
+  document.getElementById('connList').innerHTML = connHtml;
+}
+
+function initMonitorCharts(perf) {
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  if (charts.iops) charts.iops.destroy();
+  charts.iops = new Chart(document.getElementById('iopsChart'), {
+    type: 'line',
+    data: {
+      labels: Array(20).fill(''),
+      datasets: [{
+        label: 'IOPS',
+        data: Array(20).fill(0).map((_, i) => i === 19 ? perf.iops : Math.random() * 1000),
+        borderColor: '#007aff',
+        backgroundColor: 'rgba(0,122,255,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { display: false }, y: { display: true, beginAtZero: true } }
+    }
+  });
+  
+  if (charts.lat) charts.lat.destroy();
+  charts.lat = new Chart(document.getElementById('latChart'), {
+    type: 'line',
+    data: {
+      labels: Array(20).fill(''),
+      datasets: [{
+        label: '延迟',
+        data: Array(20).fill(0).map((_, i) => i === 19 ? perf.latency_ms : Math.random() * 10),
+        borderColor: '#ff9500',
+        backgroundColor: 'rgba(255,149,0,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { display: false }, y: { display: true, beginAtZero: true } }
+    }
+  });
+  
+  if (charts.thru) charts.thru.destroy();
+  charts.thru = new Chart(document.getElementById('thruChart'), {
+    type: 'line',
+    data: {
+      labels: Array(20).fill(''),
+      datasets: [{
+        label: '吞吐量',
+        data: Array(20).fill(0).map((_, i) => i === 19 ? perf.throughput_mb_s : Math.random() * 100),
+        borderColor: '#34c759',
+        backgroundColor: 'rgba(52,199,89,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { display: false }, y: { display: true, beginAtZero: true } }
+    }
+  });
+}
+
+function startMonitorRefresh() {
+  if (monitorInterval) clearInterval(monitorInterval);
+  monitorInterval = setInterval(() => {
+    if (currentTab === 'monitor') loadMonitor();
+  }, 3000);
+}
+
+async function loadAlerts() {
+  const alerts = await api('/alerts');
+  const html = alerts.length === 0 ? '<div class="empty"><div class="eicon">🔔</div><div>暂无告警</div></div>' :
+    alerts.map(a => `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div class="ln">${a.title}</div>
+          <span class="badge ${a.severity==='critical'?'b-err':a.severity==='warning'?'b-warn':'b-info'}">${a.severity}</span>
+        </div>
+        <div class="lm" style="margin-top:8px">${a.message}</div>
+        <div class="srow" style="margin-top:12px"><span class="slbl">时间</span><span class="sval">${new Date(a.created_at).toLocaleString('zh-CN')}</span></div>
+        ${!a.acknowledged ? `<button class="btn btn-sm btn-s" style="margin-top:12px" onclick="ackAlert(${a.id})">确认</button>` : '<div class="lm" style="margin-top:8px;color:var(--ok)">✅ 已确认</div>'}
+      </div>
+    `).join('');
+  document.getElementById('alertsList').innerHTML = html;
+  
+  const rules = await api('/alerts/rules');
+  const rulesHtml = rules.length === 0 ? '<div class="empty"><div class="eicon">📋</div><div>暂无规则</div></div>' :
+    rules.map(r => `
+      <div class="card">
+        <div class="ln">${r.name}</div>
+        <div class="srow"><span class="slbl">指标</span><span class="sval">${r.metric}</span></div>
+        <div class="srow"><span class="slbl">条件</span><span class="sval">${r.operator} ${r.threshold}</span></div>
+        <div class="srow"><span class="slbl">严重级别</span><span class="sval">${r.severity}</span></div>
+        <button class="btn btn-sm btn-d" style="margin-top:12px" onclick="deleteAlertRule(${r.id})">删除</button>
+      </div>
+    `).join('');
+  document.getElementById('rulesList').innerHTML = rulesHtml;
+}
+
+function ackAlert(id) {
+  api(`/alerts/${id}/ack`, {method:'PUT'}).then(() => {
+    toast('已确认', 'ok');
+    loadAlerts();
+  });
+}
+
+function showAlertRuleForm() {
+  document.getElementById('formTitle').textContent = '创建告警规则';
+  document.getElementById('formBody').innerHTML = `
+    <label class="mlabel">名称</label>
+    <input class="minput" id="fRuleName" placeholder="CPU 使用率过高">
+    <label class="mlabel">指标</label>
+    <select class="msel" id="fRuleMetric">
+      <option value="cpu_usage">CPU 使用率</option>
+      <option value="memory_usage">内存使用率</option>
+      <option value="disk_usage">磁盘使用率</option>
+      <option value="iops">IOPS</option>
+    </select>
+    <label class="mlabel">操作符</label>
+    <select class="msel" id="fRuleOp">
+      <option value=">">大于</option>
+      <option value="<">小于</option>
+      <option value="=">等于</option>
+    </select>
+    <label class="mlabel">阈值</label>
+    <input class="minput" id="fRuleThreshold" type="number" placeholder="80">
+    <label class="mlabel">严重级别</label>
+    <select class="msel" id="fRuleSeverity">
+      <option value="info">信息</option>
+      <option value="warning">警告</option>
+      <option value="critical">严重</option>
+    </select>
+  `;
+  document.getElementById('formSubmitBtn').onclick = async () => {
+    const data = {
+      name: document.getElementById('fRuleName').value,
+      metric: document.getElementById('fRuleMetric').value,
+      operator: document.getElementById('fRuleOp').value,
+      threshold: parseFloat(document.getElementById('fRuleThreshold').value),
+      severity: document.getElementById('fRuleSeverity').value
+    };
+    if (!data.name) return toast('请填写名称', 'err');
+    try {
+      await api('/alerts/rules', {method:'POST', body:JSON.stringify(data)});
+      closeModal('formModal');
+      toast('创建成功', 'ok');
+      loadAlerts();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('formModal');
+}
+
+function deleteAlertRule(id) {
+  document.getElementById('deleteMsg').textContent = `确定要删除此规则吗？`;
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/alerts/rules/${id}`, {method:'DELETE'});
+      closeModal('deleteModal');
+      toast('删除成功', 'ok');
+      loadAlerts();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+async function loadLogs() {
+  const params = new URLSearchParams();
+  if (logLevel !== 'all') params.append('level', logLevel);
+  const search = document.getElementById('logSearch')?.value;
+  if (search) params.append('search', search);
+  
+  const logs = await api(`/logs?${params.toString()}`);
+  logsData = logs;
+  renderLogs();
+}
+
+function renderLogs() {
+  const html = logsData.length === 0 ? '<div class="empty"><div class="eicon">📝</div><div>暂无日志</div></div>' :
+    '<div class="logbox">' + logsData.map(l => 
+      `<div style="margin-bottom:8px"><span style="color:${l.level==='error'?'var(--danger)':l.level==='warn'?'var(--warn)':'var(--sec)'}">[${l.level.toUpperCase()}]</span> <span style="color:var(--sec);font-size:10px">${new Date(l.timestamp).toLocaleString('zh-CN')}</span><br>${l.message}</div>`
+    ).join('') + '</div>';
+  document.getElementById('logsList').innerHTML = html;
+}
+
+function filterLogs() { loadLogs(); }
+
+function setLogLevel(level, btn) {
+  logLevel = level;
+  document.querySelectorAll('#p-logs .segi').forEach(b => b.classList.remove('act'));
+  btn.classList.add('act');
+  loadLogs();
+}
+
+function exportLogs() {
+  const blob = new Blob([JSON.stringify(logsData, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `logs_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('导出成功', 'ok');
+}
+
+async function loadUsers() {
+  const users = await api('/users');
+  const html = users.length === 0 ? '<div class="empty"><div class="eicon">👤</div><div>暂无用户</div></div>' :
+    users.map(u => `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div>
+            <div class="ln">${u.username}</div>
+            <div class="lm">${u.email || '-'}</div>
+          </div>
+          <span class="badge ${u.role==='admin'?'b-info':'b-ok'}">${u.role}</span>
+        </div>
+        <div class="srow" style="margin-top:12px"><span class="slbl">创建时间</span><span class="sval">${new Date(u.created_at).toLocaleString('zh-CN')}</span></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-sm btn-s" onclick="editUser(${u.id})">编辑</button>
+          <button class="btn btn-sm btn-d" onclick="deleteUser(${u.id})">删除</button>
+        </div>
+      </div>
+    `).join('');
+  document.getElementById('usersList').innerHTML = html;
+}
+
+function showUserForm(edit=null) {
+  document.getElementById('formTitle').textContent = edit ? '编辑用户' : '创建用户';
+  document.getElementById('formBody').innerHTML = `
+    <label class="mlabel">用户名</label>
+    <input class="minput" id="fUsername" placeholder="username" value="${edit?.username || ''}">
+    <label class="mlabel">邮箱</label>
+    <input class="minput" id="fEmail" type="email" placeholder="user@example.com" value="${edit?.email || ''}">
+    <label class="mlabel">密码${edit ? ' (留空不修改)' : ''}</label>
+    <input class="minput" id="fPassword" type="password" placeholder="password">
+    <label class="mlabel">角色</label>
+    <select class="msel" id="fRole">
+      <option value="user" ${edit?.role==='user'?'selected':''}>普通用户</option>
+      <option value="admin" ${edit?.role==='admin'?'selected':''}>管理员</option>
+    </select>
+  `;
+  document.getElementById('formSubmitBtn').onclick = async () => {
+    const data = {
+      username: document.getElementById('fUsername').value,
+      email: document.getElementById('fEmail').value,
+      role: document.getElementById('fRole').value
+    };
+    const password = document.getElementById('fPassword').value;
+    if (password) data.password = password;
+    if (!data.username) return toast('请填写用户名', 'err');
+    if (!edit && !password) return toast('请填写密码', 'err');
+    try {
+      if (edit) await api(`/users/${edit.id}`, {method:'PUT', body:JSON.stringify(data)});
+      else await api('/users', {method:'POST', body:JSON.stringify(data)});
+      closeModal('formModal');
+      toast(edit ? '更新成功' : '创建成功', 'ok');
+      loadUsers();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('formModal');
+}
+
+function editUser(id) {
+  api(`/users/${id}`).then(u => showUserForm(u));
+}
+
+function deleteUser(id) {
+  document.getElementById('deleteMsg').textContent = `确定要删除此用户吗？`;
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/users/${id}`, {method:'DELETE'});
+      closeModal('deleteModal');
+      toast('删除成功', 'ok');
+      loadUsers();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+async function loadLogs() {
+  const logs = await api('/logs');
+  logsData = logs;
+  renderLogs();
+}
+
+function renderLogs() {
+  const search = document.getElementById('logSearch').value.toLowerCase();
+  const filtered = logsData.filter(l => {
+    const matchSearch = !search || l.message.toLowerCase().includes(search) || l.level.toLowerCase().includes(search);
+    const matchLevel = logLevel === 'all' || l.level.toLowerCase() === logLevel;
+    return matchSearch && matchLevel;
+  });
+  
+  const html = filtered.length === 0 ? '<div class="empty"><div class="eicon">📝</div><div>暂无日志</div></div>' :
+    filtered.map(l => `
+      <div class="card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span class="badge ${l.level==='ERROR'?'b-err':l.level==='WARN'?'b-warn':'b-info'}">${l.level}</span>
+          <span class="vsm">${new Date(l.timestamp).toLocaleString('zh-CN')}</span>
+        </div>
+        <div style="font-size:13px">${l.message}</div>
+        ${l.source ? `<div class="vsm" style="margin-top:4px">来源: ${l.source}</div>` : ''}
+      </div>
+    `).join('');
+  document.getElementById('logsList').innerHTML = html;
+}
+
+function filterLogs() { renderLogs(); }
+function setLogLevel(level, btn) {
+  logLevel = level;
+  btn.parentElement.querySelectorAll('.segi').forEach(b => b.classList.remove('act'));
+  btn.classList.add('act');
+  renderLogs();
+}
+
+async function exportLogs() {
+  try {
+    const url = `${API_BASE}/logs/export?format=json`;
+    const r = await fetch(url, {headers: {'Authorization': `Bearer ${token}`}});
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `iscsi-logs-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    toast('导出成功', 'ok');
+  } catch(e) { toast('导出失败', 'err'); }
+}
+
+async function loadUsers() {
+  const users = await api('/users');
+  const html = users.length === 0 ? '<div class="empty"><div class="eicon">👤</div><div>暂无用户</div></div>' :
+    users.map(u => `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div>
+            <div class="ln">${u.username}</div>
+            <div class="lm">${u.email || '-'}</div>
+          </div>
+          <span class="badge ${u.role==='admin'?'b-err':'b-info'}">${u.role}</span>
+        </div>
+        <div class="srow" style="margin-top:12px"><span class="slbl">创建时间</span><span class="sval">${new Date(u.created_at).toLocaleDateString('zh-CN')}</span></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-sm btn-s" onclick="editUser(${u.id})">编辑</button>
+          <button class="btn btn-sm btn-d" onclick="deleteUser(${u.id})">删除</button>
+        </div>
+      </div>
+    `).join('');
+  document.getElementById('usersList').innerHTML = html;
+}
+
+function showUserForm(edit=null) {
+  document.getElementById('formTitle').textContent = edit ? '编辑用户' : '创建用户';
+  document.getElementById('formBody').innerHTML = `
+    <label class="mlabel">用户名</label>
+    <input class="minput" id="fUsername" placeholder="username" value="${edit?.username || ''}">
+    <label class="mlabel">邮箱</label>
+    <input class="minput" id="fEmail" type="email" placeholder="user@example.com" value="${edit?.email || ''}">
+    <label class="mlabel">密码${edit ? ' (留空不修改)' : ''}</label>
+    <input class="minput" id="fPassword" type="password" placeholder="password">
+    <label class="mlabel">角色</label>
+    <select class="msel" id="fRole">
+      <option value="admin" ${edit?.role==='admin'?'selected':''}>管理员</option>
+      <option value="operator" ${edit?.role==='operator'?'selected':''}>操作员</option>
+      <option value="viewer" ${edit?.role==='viewer'?'selected':''}>查看者</option>
+    </select>
+  `;
+  document.getElementById('formSubmitBtn').onclick = async () => {
+    const data = {
+      username: document.getElementById('fUsername').value,
+      email: document.getElementById('fEmail').value,
+      role: document.getElementById('fRole').value
+    };
+    const pass = document.getElementById('fPassword').value;
+    if (pass) data.password = pass;
+    if (!data.username) return toast('请填写用户名', 'err');
+    if (!edit && !pass) return toast('请设置密码', 'err');
+    try {
+      if (edit) await api(`/users/${edit.id}`, {method:'PUT', body:JSON.stringify(data)});
+      else await api('/users', {method:'POST', body:JSON.stringify(data)});
+      closeModal('formModal');
+      toast(edit ? '更新成功' : '创建成功', 'ok');
+      loadUsers();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('formModal');
+}
+
+function editUser(id) {
+  api(`/users/${id}`).then(u => showUserForm(u));
+}
+
+function deleteUser(id) {
+  document.getElementById('deleteMsg').textContent = `确定要删除此用户吗？`;
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/users/${id}`, {method:'DELETE'});
+      closeModal('deleteModal');
+      toast('删除成功', 'ok');
+      loadUsers();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+
+async function loadSettings() {
+  const settings = await api('/settings');
+  document.getElementById('settingsForm').innerHTML = `
+    <div class="card">
+      <div class="vs" style="margin-bottom:12px">基础配置</div>
+      <label class="mlabel">服务端口</label>
+      <input class="minput" id="sPort" type="number" value="${settings.service_port || 3260}">
+      <label class="mlabel">最大连接数</label>
+      <input class="minput" id="sMaxConn" type="number" value="${settings.max_connections || 64}">
+      <label class="mlabel">日志级别</label>
+      <select class="msel" id="sLogLevel">
+        <option value="debug" ${settings.log_level==='debug'?'selected':''}>Debug</option>
+        <option value="info" ${settings.log_level==='info'?'selected':''}>Info</option>
+        <option value="warn" ${settings.log_level==='warn'?'selected':''}>Warn</option>
+        <option value="error" ${settings.log_level==='error'?'selected':''}>Error</option>
+      </select>
+      <button class="btn btn-p" style="margin-top:12px" onclick="saveSettings()">保存配置</button>
+    </div>
+  `;
+  
+  const about = await api('/settings/about');
+  document.getElementById('aboutInfo').innerHTML = `
+    <div class="card">
+      <div class="vs" style="margin-bottom:12px">系统信息</div>
+      <div class="srow"><span class="slbl">版本</span><span class="sval">${about.version}</span></div>
+      <div class="srow"><span class="slbl">内核版本</span><span class="sval">${about.kernel_version}</span></div>
+      <div class="srow"><span class="slbl">targetcli 版本</span><span class="sval">${about.targetcli_version}</span></div>
+      <div class="srow"><span class="slbl">运行时间</span><span class="sval">${about.uptime}</span></div>
+    </div>
+  `;
+}
+
+async function saveSettings() {
+  const data = {
+    service_port: parseInt(document.getElementById('sPort').value),
+    max_connections: parseInt(document.getElementById('sMaxConn').value),
+    log_level: document.getElementById('sLogLevel').value
+  };
+  try {
+    await api('/settings', {method:'PUT', body:JSON.stringify(data)});
+    toast('保存成功', 'ok');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function backupConfig() {
+  try {
+    const data = JSON.stringify({exported_at: new Date().toISOString(), settings: 'config_data'}, null, 2);
+    const blob = new Blob([data], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `iscsi-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    toast('备份成功', 'ok');
+  } catch(e) { toast('备份失败', 'err'); }
+}
+
+function restoreConfig() {
+  const file = document.getElementById('restoreFile').files[0];
+  if (!file) return toast('请选择文件', 'err');
+  toast('恢复功能开发中', 'info');
+}
+
+async function loadSnapshots() {
+  const snapshots = await api('/snapshots');
+  const html = snapshots.length === 0 ? '<div class="empty"><div class="eicon">📸</div><div>暂无快照</div></div>' :
+    snapshots.map(s => `
+      <div class="card">
+        <div class="ln">${s.name}</div>
+        <div class="srow"><span class="slbl">LUN</span><span class="sval">${s.lun_id}</span></div>
+        <div class="srow"><span class="slbl">大小</span><span class="sval">${(s.size_bytes/1024/1024/1024).toFixed(2)} GB</span></div>
+        <div class="srow"><span class="slbl">创建时间</span><span class="sval">${new Date(s.created_at).toLocaleString('zh-CN')}</span></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-sm btn-s" onclick="restoreSnapshot(${s.id})">恢复</button>
+          <button class="btn btn-sm btn-d" onclick="deleteSnapshot(${s.id})">删除</button>
+        </div>
+      </div>
+    `).join('');
+  document.getElementById('snapshotsList').innerHTML = html;
+}
+function showSnapshotForm() {
+  document.getElementById('formTitle').textContent = '创建快照';
+  document.getElementById('formBody').innerHTML = `
+    <label class="mlabel">LUN ID</label>
+    <input class="minput" id="fSnapLun" type="number" placeholder="1">
+    <label class="mlabel">名称</label>
+    <input class="minput" id="fSnapName" placeholder="snapshot-1">
+  `;
+  document.getElementById('formSubmitBtn').onclick = async () => {
+    const data = {
+      lun_id: parseInt(document.getElementById('fSnapLun').value),
+      name: document.getElementById('fSnapName').value
+    };
+    if (!data.lun_id || !data.name) return toast('请填写完整', 'err');
+    try {
+      await api('/snapshots', {method:'POST', body:JSON.stringify(data)});
+      closeModal('formModal');
+      toast('创建成功', 'ok');
+      loadSnapshots();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('formModal');
+}
+
+function restoreSnapshot(id) {
+  document.getElementById('deleteMsg').textContent = `确定要恢复此快照吗？这将覆盖当前数据。`;
+  document.getElementById('deleteConfirmBtn').textContent = '恢复';
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/snapshots/${id}/restore`, {method:'POST'});
+      closeModal('deleteModal');
+      toast('恢复成功', 'ok');
+      document.getElementById('deleteConfirmBtn').textContent = '删除';
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+
+function deleteSnapshot(id) {
+  document.getElementById('deleteMsg').textContent = `确定要删除此快照吗？`;
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/snapshots/${id}`, {method:'DELETE'});
+      closeModal('deleteModal');
+      toast('删除成功', 'ok');
+      loadSnapshots();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+
+async function loadAPIDoc() {
+  const doc = await fetch('/api-doc').then(r => r.json());
+  const html = doc.data.map(item => `
+    <div class="api-item">
+      <span class="api-method api-${item.method.toLowerCase()}">${item.method}</span>
+      <span class="api-path">${item.path}</span>
+      <div class="api-desc">${item.description}</div>
+      ${item.auth ? '<div class="vsm" style="margin-top:4px;color:var(--accent)">🔒 需要认证</div>' : ''}
+    </div>
+  `).join('');
+  document.getElementById('apiDocList').innerHTML = html;
+}
+
+function filterApi() {
+  const search = document.getElementById('apiSearch').value.toLowerCase();
+  document.querySelectorAll('.api-item').forEach(item => {
+    const text = item.textContent.toLowerCase();
+    item.style.display = text.includes(search) ? '' : 'none';
+  });
+}
+
+function showSnapshotForm() {
+  document.getElementById('formTitle').textContent = '创建快照';
+  document.getElementById('formBody').innerHTML = `
+    <label class="mlabel">名称</label>
+    <input class="minput" id="fSnapName" placeholder="snapshot-1">
+    <label class="mlabel">LUN ID</label>
+    <input class="minput" id="fSnapLun" type="number" placeholder="1">
+  `;
+  document.getElementById('formSubmitBtn').onclick = async () => {
+    const data = {
+      name: document.getElementById('fSnapName').value,
+      lun_id: parseInt(document.getElementById('fSnapLun').value)
+    };
+    if (!data.name || !data.lun_id) return toast('请填写完整', 'err');
+    try {
+      await api('/snapshots', {method:'POST', body:JSON.stringify(data)});
+      closeModal('formModal');
+      toast('创建成功', 'ok');
+      loadSnapshots();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('formModal');
+}
+
+function restoreSnapshot(id) {
+  document.getElementById('deleteMsg').textContent = `确定要恢复此快照吗？这将覆盖当前数据。`;
+  document.getElementById('deleteConfirmBtn').textContent = '恢复';
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/snapshots/${id}/restore`, {method:'POST'});
+      closeModal('deleteModal');
+      toast('恢复成功', 'ok');
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+
+function deleteSnapshot(id) {
+  document.getElementById('deleteMsg').textContent = `确定要删除此快照吗？`;
+  document.getElementById('deleteConfirmBtn').textContent = '删除';
+  document.getElementById('deleteConfirmBtn').onclick = async () => {
+    try {
+      await api(`/snapshots/${id}`, {method:'DELETE'});
+      closeModal('deleteModal');
+      toast('删除成功', 'ok');
+      loadSnapshots();
+    } catch(e) { toast(e.message, 'err'); }
+  };
+  openModal('deleteModal');
+}
+
+async function loadAPIDoc() {
+  const doc = await fetch('/api-doc').then(r => r.json());
+  const apis = doc.data || [];
+  const html = apis.map(a => `
+    <div class="api-item">
+      <span class="api-method api-${a.method.toLowerCase()}">${a.method}</span>
+      <span class="api-path">${a.path}</span>
+      <div class="api-desc">${a.description}${a.auth ? ' 🔒' : ''}</div>
+    </div>
+  `).join('');
+  document.getElementById('apiDocList').innerHTML = html || '<div class="empty"><div class="eicon">📚</div><div>暂无 API 文档</div></div>';
+}
+
+function filterApi() {
+  const search = document.getElementById('apiSearch').value.toLowerCase();
+  document.querySelectorAll('.api-item').forEach(item => {
+    const text = item.textContent.toLowerCase();
+    item.style.display = text.includes(search) ? '' : 'none';
+  });
+}
+
+// Handle tab-content class
+document.querySelectorAll('.tab-content').forEach(el => {
+  if (el.classList.contains('act')) el.style.display = 'block';
+});
+
+// Override switchSub to handle tab-content
+const origSwitchSub = switchSub;
+switchSub = function(parent, sub, btn) {
+  document.querySelectorAll(`#${parent} .tab-content`).forEach(t => {
+    t.classList.remove('act');
+    t.style.display = 'none';
+  });
+  const target = document.getElementById(`${parent}-${sub}`);
+  target.classList.add('act');
+  target.style.display = 'block';
+  document.querySelectorAll(`#${parent} .segi`).forEach(b => b.classList.remove('act'));
+  if (btn) btn.classList.add('act');
+};
+
+// Init tab-content display
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.tab-content.act').forEach(el => el.style.display = 'block');
+});
+</script>
+</body>
+</html>

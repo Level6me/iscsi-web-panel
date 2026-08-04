@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  iscsi-web-panel:
+    build: .
+    container_name: iscsi-web-panel
+    privileged: true
+    ports:
+      - "3005:3005"
+    volumes:
+      - ./data:/app/data
+      - /sys/kernel/config:/sys/kernel/config
+    environment:
+      - LISTEN_ADDR=:3005
+      - JWT_SECRET=your-secret-key-change-in-production
+      - DATA_DIR=/app/data
+      - DB_PATH=/app/data/iscsi.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/api/v1/api-doc"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

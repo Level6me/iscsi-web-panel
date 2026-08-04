@@ -1,0 +1,26 @@
+# Binaries
+iscsi-web-panel
+iscsi-web-panel-arm64
+iscsi-web-panel-amd64
+*.exe
+
+# Data
+data/*.db
+data/*.db-journal
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+/build/
+/tmp/
+
+# Logs
+*.log
