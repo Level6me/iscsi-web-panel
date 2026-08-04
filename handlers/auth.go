@@ -20,7 +20,7 @@ func Login(c *gin.Context) {
 	}
 
 	// Mock: accept admin/admin
-	if req.Username != "admin" || req.Password != "admin" {
+	if req.Username != "admin" || req.Password != "admin123" {
 		utils.Error(c, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
