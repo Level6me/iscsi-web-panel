@@ -127,9 +127,7 @@ go mod download
 # 运行开发服务器
 go run main.go
 
-# 重新生成前端
-cd frontend
-python3 build.py
+# 前端为 frontend/index.html，直接编辑即可（无独立构建步骤）
 ```
 
 ## 截图
