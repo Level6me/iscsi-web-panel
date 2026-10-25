@@ -130,7 +130,7 @@ build_project() {
     go mod download
     
     # 编译
-    go build -o iscsi-web-panel -ldflags="-s -w" main.go
+    go build -o iscsi-web-panel -ldflags="-s -w" .
     
     # 创建数据目录
     mkdir -p data
