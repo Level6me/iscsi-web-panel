@@ -464,8 +464,8 @@ async function loadTargets() {
           <span>Portal: ${t.portals?.length || 0}</span>
         </div>
         <div style="display:flex;gap:8px;margin-top:12px">
-          <button class="btn btn-sm btn-s" onclick="editTarget('${t.name}')">编辑</button>
-          <button class="btn btn-sm btn-d" onclick="deleteTarget('${t.name}')">删除</button>
+          <button class="btn btn-sm btn-s" onclick="editTarget(encodeURIComponent(t.name))">编辑</button>
+          <button class="btn btn-sm btn-d" onclick="deleteTarget(encodeURIComponent(t.name))">删除</button>
         </div>
       </div>
     `).join('');
@@ -614,8 +614,8 @@ async function loadInitiators() {
           <div class="lm">LUN 映射: ${i.lun_mapping?.length || 0} 个</div>
         </div>
         <div style="display:flex;gap:8px;margin-top:12px">
-          <button class="btn btn-sm btn-s" onclick="editInitiator('${i.initiator_iqn}')">编辑</button>
-          <button class="btn btn-sm btn-d" onclick="deleteInitiator('${i.initiator_iqn}')">删除</button>
+          <button class="btn btn-sm btn-s" onclick="editInitiator(encodeURIComponent(i.initiator_iqn))">编辑</button>
+          <button class="btn btn-sm btn-d" onclick="deleteInitiator(encodeURIComponent(i.initiator_iqn))">删除</button>
         </div>
       </div>
     `).join('');
@@ -685,7 +685,7 @@ async function loadNetwork() {
       <div class="card">
         <div class="ln">${p.ip}:${p.port}</div>
         <div class="lm">状态: ${p.status || 'active'}</div>
-        <button class="btn btn-sm btn-d" style="margin-top:12px" onclick="deletePortal('${p.ip}:${p.port}')">删除</button>
+        <button class="btn btn-sm btn-d" style="margin-top:12px" onclick="deletePortal(encodeURIComponent(p.ip + ':' + p.port))">删除</button>
       </div>
     `).join('');
   document.getElementById('portalsMgmt').innerHTML = portalsHtml + 
@@ -763,7 +763,7 @@ async function loadStorage() {
         <div class="srow"><span class="slbl">容量</span><span class="sval">${(p.total_bytes/1024/1024/1024).toFixed(2)} GB</span></div>
         <div class="srow"><span class="slbl">已用</span><span class="sval">${(p.used_bytes/1024/1024/1024).toFixed(2)} GB</span></div>
         <div class="pbar"><div class="pfill" style="width:${(p.used_bytes/p.total_bytes*100).toFixed(1)}%;background:${p.used_bytes/p.total_bytes>0.8?'var(--danger)':'var(--ok)'}"></div></div>
-        <button class="btn btn-sm btn-d" style="margin-top:12px" onclick="deleteStoragePool('${p.name}')">删除</button>
+        <button class="btn btn-sm btn-d" style="margin-top:12px" onclick="deleteStoragePool(encodeURIComponent(p.name))">删除</button>
       </div>
     `).join('');
   document.getElementById('storageList').innerHTML = html;

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"iscsi-web-panel/models"
@@ -110,9 +111,15 @@ func GetLUN(c *gin.Context) {
 		return
 	}
 
+	idNum, idErr := strconv.Atoi(id)
+	if idErr != nil {
+		utils.Error(c, http.StatusBadRequest, "invalid LUN id")
+		return
+	}
+
 	for _, t := range targets {
 		for _, l := range t.LUNs {
-			if string(rune(l.LUNID+'0')) == id {
+			if l.LUNID == idNum {
 				utils.Success(c, models.LUN{
 					ID:          l.LUNID,
 					Index:       l.LUNID,
@@ -150,9 +157,10 @@ func DeleteLUN(c *gin.Context) {
 	}
 
 	// Parse LUN ID
-	lunID := 0
-	if len(id) > 0 {
-		lunID = int(id[0] - '0')
+	lunID, parseErr := strconv.Atoi(id)
+	if parseErr != nil {
+		utils.Error(c, http.StatusBadRequest, "invalid LUN id")
+		return
 	}
 
 	for _, t := range targets {

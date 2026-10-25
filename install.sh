@@ -167,7 +167,6 @@ Environment=DATA_DIR=/opt/iscsi-web-panel/data
 Environment=DB_PATH=/opt/iscsi-web-panel/data/iscsi.db
 
 # 安全设置
-NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/opt/iscsi-web-panel/data

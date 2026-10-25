@@ -11,6 +11,11 @@ import (
 func main() {
 	cfg := config.Load()
 
+	// Apply configured JWT secret (fallback keeps backward compatibility)
+	if cfg.JWTSecret != "" {
+		middleware.SetJWTSecret(cfg.JWTSecret)
+	}
+
 	r := gin.Default()
 
 	// CORS
