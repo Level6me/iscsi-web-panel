@@ -225,7 +225,7 @@ show_info() {
     echo ""
     echo -e "默认账号:"
     echo -e "  用户名: ${YELLOW}admin${NC}"
-    echo -e "  密码: ${YELLOW}admin123${NC}"
+    echo -e "  密码: 首次启动时自动生成（见服务日志 data/admin_password，或用环境变量 ADMIN_PASSWORD 指定）"
     echo ""
     echo -e "${RED}⚠️  重要: 请立即修改默认密码！${NC}"
     echo ""
